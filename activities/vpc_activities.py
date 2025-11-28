@@ -10,6 +10,7 @@ from utils.cmds import (
     run_tf_init_command,
     run_tf_plan_command,
     run_tf_output_command,
+    run_tf_apply_command,
 )
 
 TERRAFORM_VPC_DIR = Path(__file__).parent.parent / "terraform" / "vpc"
@@ -17,6 +18,14 @@ INIT_SUCCESS_TOKEN = "Terraform has been successfully initialized"
 PLAN_SUMMARY_PATTERN = re.compile(
     r"Plan:\s+(\d+)\s+to add,\s+(\d+)\s+to change,\s+(\d+)\s+to destroy",
     re.IGNORECASE,
+)
+APPLY_SUMMARY_PATTERN = re.compile(
+    r"Apply complete!\s+Resources:\s+(\d+)\s+added,\s+(\d+)\s+changed,\s+(\d+)\s+destroyed\.",
+    re.IGNORECASE,
+)
+RESOURCE_ID_PATTERN = re.compile(
+    r"^(?P<resource>[A-Za-z0-9_.-]+):\s+Creation complete.*\[id=(?P<id>[^\]]+)\]",
+    re.MULTILINE,
 )
 ANSI_ESCAPE_PATTERN = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 
@@ -38,8 +47,7 @@ async def terraform_init_vpc_activity() -> dict:
             "Terraform initialization completed successfully"
             if success
             else "Terraform initialization did not report success"
-        ),
-        "output": cleaned,
+        )
     }
 
 
@@ -60,9 +68,33 @@ async def terraform_plan_vpc_activity(vpc_cidr: str) -> dict:
         "stage": "plan",
         "success": summary is not None,
         "summary": summary,
-        "output": cleaned,
     }
 
+@activity.defn(name="terraform_apply_vpc_activity")
+async def terraform_apply_vpc_activity(vpc_cidr: str) -> dict:
+    activity.logger.info("Running a terraform apply to initialize VPC resources")
+    raw_output = await run_tf_apply_command(TERRAFORM_VPC_DIR, vpc_cidr)
+    cleaned = _strip_ansi(raw_output)
+    match = APPLY_SUMMARY_PATTERN.search(cleaned)
+    summary = None
+    if match:
+        summary = {
+            "added": int(match.group(1)),
+            "changed": int(match.group(2)),
+            "destroyed": int(match.group(3)),
+        }
+    resources = [
+        {"resource": m.group("resource"), "id": m.group("id")}
+        for m in RESOURCE_ID_PATTERN.finditer(cleaned)
+    ]
+    completion_line = match.group(0) if match else "Apply summary unavailable"
+    return {
+        "stage": "apply",
+        "success": summary is not None,
+        "summary": summary,
+        "completion": completion_line,
+        "resources": resources,
+    }
 
 @activity.defn(name="terraform_output_vpc_activity")
 async def terraform_output_vpc_activity() -> dict:

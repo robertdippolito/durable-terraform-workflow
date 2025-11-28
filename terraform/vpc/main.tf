@@ -13,6 +13,6 @@ resource "aws_vpc" "vpc" {
   enable_dns_hostnames = true
 
   tags = {
-    Name = "dev-vpc"
+    Name = "dev-vpc-temporal"
   }
 }
