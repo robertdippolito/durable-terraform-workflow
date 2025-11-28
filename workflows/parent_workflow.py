@@ -12,7 +12,7 @@ from .resources.vpc_terraform_workflow import VPCWorkflow
 @workflow.defn
 class ParentWorkflow:
     @workflow.run
-    async def run(self, vpc_cidr: str) -> str:
+    async def run(self, vpc_cidr: str) -> dict:
         retry_policy = RetryPolicy(
             maximum_attempts=5,
             maximum_interval=timedelta(seconds=10),
