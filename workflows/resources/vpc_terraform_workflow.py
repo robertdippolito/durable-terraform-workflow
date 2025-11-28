@@ -23,6 +23,13 @@ class VPCWorkflow:
         )
         workflow.logger.info("Plan completed with summary: %s", plan_output.get("summary"))
 
+        apply_output = await workflow.execute_activity(
+            "terraform_apply_vpc_activity",
+            vpc_cidr,
+            start_to_close_timeout=timedelta(minutes=5),
+        )
+        workflow.logger.info("Apply completed with summary: %s", apply_output.get("summary"))
+
         outputs = await workflow.execute_activity(
             "terraform_output_vpc_activity",
             start_to_close_timeout=timedelta(minutes=1),
@@ -30,5 +37,6 @@ class VPCWorkflow:
         return {
             "init": init_output,
             "plan": plan_output,
+            "apply": apply_output,
             "outputs": outputs,
         }
