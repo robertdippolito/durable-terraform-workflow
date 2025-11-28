@@ -12,12 +12,12 @@ from .resources.vpc_terraform_workflow import VPCWorkflow
 @workflow.defn
 class ParentWorkflow:
     @workflow.run
-    async def run(self, vpc_cidr: str) -> dict[str, str]:
+    async def run(self, vpc_cidr: str) -> str:
         retry_policy = RetryPolicy(
             maximum_attempts=5,
             maximum_interval=timedelta(seconds=10),
         )
-        return await workflow.execute_child_workflow(
+        result = await workflow.execute_child_workflow(
             VPCWorkflow.run,
             vpc_cidr,
             retry_policy=retry_policy,
@@ -25,3 +25,5 @@ class ParentWorkflow:
             run_timeout=timedelta(minutes=30),
             parent_close_policy=ParentClosePolicy.ABANDON,
         )
+        workflow.logger.info("VPC child workflow completed: %s", result)
+        return result

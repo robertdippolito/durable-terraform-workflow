@@ -6,7 +6,7 @@ from temporalio.worker import Worker
 
 from workflows.parent_workflow import ParentWorkflow
 from workflows.resources.vpc_terraform_workflow import VPCWorkflow
-from activities.vpc_activities import terraform_init_vpc_activity
+from activities.vpc_activities import terraform_init_vpc_activity, terraform_plan_vpc_activity
 
 
 async def main() -> None:
@@ -19,7 +19,7 @@ async def main() -> None:
         client,
         task_queue="MY_TASK_QUEUE",
         workflows=[ParentWorkflow, VPCWorkflow],
-        activities=[terraform_init_vpc_activity],
+        activities=[terraform_init_vpc_activity, terraform_plan_vpc_activity],
     )
 
     logger.info("Worker listening on task queue MY_TASK_QUEUE")
