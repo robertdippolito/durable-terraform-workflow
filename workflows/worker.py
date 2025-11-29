@@ -5,6 +5,7 @@ from temporalio.client import Client
 from temporalio.worker import Worker
 
 from workflows.parent_workflow import ParentWorkflow
+from workflows.drift_workflow import DriftWorkflow
 from workflows.resources.vpc_terraform_workflow import VPCWorkflow
 from activities.vpc_activities import (
     terraform_init_vpc_activity,
@@ -23,7 +24,7 @@ async def main() -> None:
     worker = Worker(
         client,
         task_queue="MY_TASK_QUEUE",
-        workflows=[ParentWorkflow, VPCWorkflow],
+        workflows=[ParentWorkflow, VPCWorkflow, DriftWorkflow],
         activities=[
             terraform_init_vpc_activity,
             terraform_plan_vpc_activity,
