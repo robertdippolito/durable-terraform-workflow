@@ -6,3 +6,9 @@ terraform {
     }
   }
 }
+
+resource "aws_s3_bucket" "example" {
+  bucket = "my-tf-temporal-test-bucket"
+
+  tags = var.tags
+}

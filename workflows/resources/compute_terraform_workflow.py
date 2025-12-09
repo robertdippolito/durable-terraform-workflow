@@ -1,6 +1,7 @@
 from datetime import timedelta
 from temporalio import workflow
 
+
 @workflow.defn
 class ComputeWorkflow:
     @workflow.run
@@ -12,6 +13,13 @@ class ComputeWorkflow:
         )
         workflow.logger.info("Initialization completed")
 
+        plan_output = await workflow.execute_activity(
+            "terraform_plan_activity",
+            spec,
+            start_to_close_timeout=timedelta(minutes=5),
+        )
+        workflow.logger.info("Plan completed with summary: %s", plan_output.get("summary"))
+
         # apply_output = await workflow.execute_activity(
         #     "terraform_apply_activity",
         #     spec,
@@ -21,5 +29,6 @@ class ComputeWorkflow:
 
         return {
             "init": init_output,
-            "apply": "apply"
+            "plan": plan_output,
+            "apply": "Not completed yet.."
         }

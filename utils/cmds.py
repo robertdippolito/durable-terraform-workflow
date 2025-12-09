@@ -21,6 +21,24 @@ async def run_tf_init_command(directory: Union[str, Path]) -> str:
         )
     return stdout.decode()
 
+async def run_tf_plan_command_v2(inputs: dict[str, str], directory: Union[str, Path]) -> str:
+    args = ["terraform", "plan", "-input=false"]
+    for key, value in inputs.items():
+        args.extend(["-var",f"{key}={value}"])
+
+    proc = await asyncio.create_subprocess_exec(
+        *args,
+        cwd=str(directory),
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.STDOUT
+    )
+    stdout, _ = await proc.communicate()
+    if proc.returncode:
+        raise RuntimeError(
+            f"Error running {' '.join(args)}: {stdout.decode().strip()}"
+            )
+    return stdout.decode()
+
 async def run_tf_plan_command(directory: Union[str, Path], vpc_cidr: str) -> str:
     proc = await asyncio.create_subprocess_exec(
         "terraform",
