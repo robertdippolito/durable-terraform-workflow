@@ -3,7 +3,7 @@ from temporalio import activity
 import json
 import re
 from pathlib import Path
-from typing import Mapping, Union
+from typing import Optional, Union
 
 
 from utils.cmds import (
@@ -36,7 +36,7 @@ def _strip_ansi(text: str) -> str:
 
 
 @activity.defn(name="terraform_init_activity")
-async def terraform_init_activity(directory: Union[str, Path] = TERRAFORM_EC2_DIR) -> dict:
+async def terraform_init_activity(directory: Union[str, Path]) -> dict:
     activity.logger.info("Initializing the Terraform init activity")
     raw_output = await run_tf_init_command(directory)
     cleaned = _strip_ansi(raw_output)
@@ -54,11 +54,11 @@ async def terraform_init_activity(directory: Union[str, Path] = TERRAFORM_EC2_DI
 
 @activity.defn(name="terraform_plan_activity")
 async def terraform_plan_activity(
-    overrides: Union[Mapping[str, object], None] = None,
-    directory: Union[str, Path] = TERRAFORM_EC2_DIR,
+    directory: Union[str, Path],
     tfvars_path: Union[str, Path] = TFVARS_PATH,
+    overrides: Optional[dict] = None,
 ) -> dict:
-    activity.logger.info("Running a terraform plan using %s", tfvars_path)
+    activity.logger.info("Running a terraform plan in %s", directory)
     if overrides:
         activity.logger.info("Applying override vars for plan execution")
         raw_output = await run_tf_plan_with_tfvars(
@@ -68,7 +68,7 @@ async def terraform_plan_activity(
     else:
         raw_output = await run_tf_plan_with_tfvars(
             directory,
-            tfvars_path=tfvars_path,
+            tfvars_path=tfvars_path or TFVARS_PATH,
         )
     cleaned = _strip_ansi(raw_output)
     match = PLAN_SUMMARY_PATTERN.search(cleaned)
@@ -87,7 +87,7 @@ async def terraform_plan_activity(
 
 @activity.defn(name="terraform_apply_activity")
 async def terraform_apply_activity(
-    overrides: Union[Mapping[str, object], None] = None,
+    overrides: Optional[dict] = None,
     directory: Union[str, Path] = TERRAFORM_EC2_DIR,
     tfvars_path: Union[str, Path] = TFVARS_PATH,
 ) -> dict:

@@ -20,7 +20,7 @@ class ParentWorkflow:
         )
         vpc_result = await workflow.execute_child_workflow(
             VPCWorkflow.run,
-            payload["vpc"]["cidr"],
+            payload["vpc"]["vpc_cidr"],
             retry_policy=retry_policy,
             execution_timeout=timedelta(hours=1),
             run_timeout=timedelta(minutes=30),

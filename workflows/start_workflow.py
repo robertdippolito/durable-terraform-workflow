@@ -13,7 +13,7 @@ async def main() -> None:
     client = await Client.connect("localhost:7233", namespace="default")
 
     infra_config = {
-            "vpc": {"cidr": "10.0.0.0/16"},
+            "vpc": {"vpc_cidr": "10.0.0.0/16"},
             "compute": {"tags": {"Name": "dev-instance"}},
         }
 
