@@ -59,43 +59,6 @@ async def run_tf_plan_with_tfvars(
         if cleanup_path and os.path.exists(cleanup_path):
             os.remove(cleanup_path)
 
-async def run_tf_plan_command(directory: Union[str, Path], vpc_cidr: str) -> str:
-    proc = await asyncio.create_subprocess_exec(
-        "terraform",
-        "plan",
-        "-input=false",
-        "-var",
-        f"vpc_cidr={vpc_cidr}",
-        cwd=str(directory),
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.STDOUT
-    )
-    stdout, _ = await proc.communicate()
-    if proc.returncode:
-        raise RuntimeError(
-            f"Error running terraform plan -input=false -var vpc_cidr={vpc_cidr}: {stdout.decode().strip()}"
-        )
-    return stdout.decode()
-
-async def run_tf_apply_command(directory: Union[str, Path], vpc_cidr: str) -> str:
-    proc = await asyncio.create_subprocess_exec(
-        "terraform",
-        "apply",
-        "-input=false",
-        "-var",
-        f"vpc_cidr={vpc_cidr}",
-        "-auto-approve=true",
-        cwd=str(directory),
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.STDOUT
-    )
-    stdout, _ = await proc.communicate()
-    if proc.returncode:
-        raise RuntimeError(
-            f"Error running terraform apply -input=false -auto-approve=true -var vpc_cidr={vpc_cidr}: {stdout.decode().strip()}"
-        )
-    return stdout.decode()
-
 async def run_tf_apply_with_tfvars(
     directory: Union[str, Path],
     vars_mapping: Mapping[str, object] | None = None,
