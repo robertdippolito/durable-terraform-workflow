@@ -10,12 +10,17 @@ async def main() -> None:
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger("drifet-detection-workflow")
 
+    infra_config = {
+        "vpc": {"vpc_cidr": "10.0.0.0/16"},
+        "compute": {"tags": {"Name": "dev-instance"}},
+    }
+
     client = await Client.connect("localhost:7233", namespace="default")
 
     try:
         result = await client.execute_workflow(
             DriftWorkflow.run,
-            "10.0.0.0/16",
+            infra_config["vpc"],
             id="drift-detection-workflow",
             task_queue="MY_TASK_QUEUE",
         )
