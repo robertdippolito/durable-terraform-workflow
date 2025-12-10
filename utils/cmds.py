@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import json
+import os
 from pathlib import Path
-from typing import Union
+from tempfile import NamedTemporaryFile
+from typing import Mapping, Union
 
 
 async def run_tf_init_command(directory: Union[str, Path]) -> str:
@@ -21,42 +24,75 @@ async def run_tf_init_command(directory: Union[str, Path]) -> str:
         )
     return stdout.decode()
 
-async def run_tf_plan_command(directory: Union[str, Path], vpc_cidr: str) -> str:
-    proc = await asyncio.create_subprocess_exec(
-        "terraform",
-        "plan",
-        "-input=false",
-        "-var",
-        f"vpc_cidr={vpc_cidr}",
-        cwd=str(directory),
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.STDOUT
-    )
-    stdout, _ = await proc.communicate()
-    if proc.returncode:
-        raise RuntimeError(
-            f"Error running terraform plan -input=false -var vpc_cidr={vpc_cidr}: {stdout.decode().strip()}"
-        )
-    return stdout.decode()
+async def run_tf_plan_with_tfvars(
+    directory: Union[str, Path],
+    vars_mapping: Mapping[str, object] | None = None,
+    tfvars_path: Union[str, Path] | None = None,
+) -> str:
+    cleanup_path: str | None = None
+    if tfvars_path is not None:
+        var_file = str(tfvars_path)
+    elif vars_mapping:
+        with NamedTemporaryFile("w+", suffix=".auto.tfvars.json", delete=False) as tmp:
+            json.dump(vars_mapping, tmp)
+            tmp.flush()
+            cleanup_path = tmp.name
+            var_file = tmp.name
+    else:
+        raise ValueError("Either vars_mapping or tfvars_path must be provided")
 
-async def run_tf_apply_command(directory: Union[str, Path], vpc_cidr: str) -> str:
-    proc = await asyncio.create_subprocess_exec(
-        "terraform",
-        "apply",
-        "-input=false",
-        "-var",
-        f"vpc_cidr={vpc_cidr}",
-        "-auto-approve=true",
-        cwd=str(directory),
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.STDOUT
-    )
-    stdout, _ = await proc.communicate()
-    if proc.returncode:
-        raise RuntimeError(
-            f"Error running terraform apply -input=false -auto-approve=true -var vpc_cidr={vpc_cidr}: {stdout.decode().strip()}"
+    args = ["terraform", "plan", "-input=false", f"-var-file={var_file}"]
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *args,
+            cwd=str(directory),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
         )
-    return stdout.decode()
+        stdout, _ = await proc.communicate()
+        if proc.returncode:
+            raise RuntimeError(
+                f"Error running {' '.join(args)}: {stdout.decode().strip()}"
+            )
+        return stdout.decode()
+    finally:
+        if cleanup_path and os.path.exists(cleanup_path):
+            os.remove(cleanup_path)
+
+async def run_tf_apply_with_tfvars(
+    directory: Union[str, Path],
+    vars_mapping: Mapping[str, object] | None = None,
+    tfvars_path: Union[str, Path] | None = None,
+) -> str:
+    cleanup_path: str | None = None
+    if tfvars_path is not None:
+        var_file = str(tfvars_path)
+    elif vars_mapping:
+        with NamedTemporaryFile("w+", suffix=".auto.tfvars.json", delete=False) as tmp:
+            json.dump(vars_mapping, tmp)
+            tmp.flush()
+            cleanup_path = tmp.name
+            var_file = tmp.name
+    else:
+        raise ValueError("Either vars_mapping or tfvars_path must be provided")
+
+    args = ["terraform", "apply", "-input=false", f"-var-file={var_file}", "-auto-approve=true"]
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *args,
+            cwd=str(directory),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+        )
+        stdout, _ = await proc.communicate()
+        if proc.returncode:
+            raise RuntimeError(
+                f"Error running {' '.join(args)}: {stdout.decode().strip()}"
+            )
+        return stdout.decode()
+    finally:
+        if cleanup_path and os.path.exists(cleanup_path):
+            os.remove(cleanup_path)
 
 
 async def run_tf_output_command(directory: Union[str, Path]) -> str:

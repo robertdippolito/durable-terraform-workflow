@@ -7,24 +7,38 @@ from temporalio.common import RetryPolicy
 from temporalio.workflow import ParentClosePolicy
 
 from .resources.vpc_terraform_workflow import VPCWorkflow
+from .resources.compute_terraform_workflow import ComputeWorkflow
 
 
 @workflow.defn
 class ParentWorkflow:
     @workflow.run
-    async def run(self, vpc_cidr: str) -> dict:
+    async def run(self, payload: dict) -> dict:
         retry_policy = RetryPolicy(
             maximum_attempts=5,
             maximum_interval=timedelta(seconds=10),
         )
-        result = await workflow.execute_child_workflow(
+        vpc_result = await workflow.execute_child_workflow(
             VPCWorkflow.run,
-            vpc_cidr,
+            payload["vpc"]["vpc_cidr"],
             retry_policy=retry_policy,
             execution_timeout=timedelta(hours=1),
             run_timeout=timedelta(minutes=30),
             parent_close_policy=ParentClosePolicy.ABANDON,
         )
-        workflow.logger.info("VPC child workflow completed: %s", result)
-        return result
+        compute_result = await workflow.execute_child_workflow(
+            ComputeWorkflow.run,
+            payload["compute"],
+            execution_timeout=timedelta(hours=1),
+            run_timeout=timedelta(minutes=30),
+            parent_close_policy=ParentClosePolicy.ABANDON,
+        )
+
+        workflow.logger.info("VPC child workflow completed: %s", vpc_result)
+        workflow.logger.info("EC2 child workflow completed: %s", compute_result)
+
+        return {
+            "vpc": vpc_result,
+            "compute": compute_result,
+        }
     
