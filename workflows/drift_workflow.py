@@ -23,8 +23,8 @@ class DriftWorkflow:
             )
 
             if drift_detected:
-                workflow.logger.warning("Drift detected: %s", summary)
+                workflow.logger.warning("Drift detected!")
             else:
-                workflow.logger.info("No drift detected: %s", summary)
+                workflow.logger.info("No drift detected")
 
             await workflow.sleep(interval_minutes * 60)
